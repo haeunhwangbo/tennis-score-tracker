@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Tennis Scorekeeper</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --out: #2c6b52;
+    --court: #1f5a9a;
+    --line: #f4f4ee;
+    --on-line: #0e2238;
+    --ink: #f7f9fb;
+    --ink-soft: rgba(247, 249, 251, 0.72);
+    --ball: #d9ea3a;
+    --panel: rgba(8, 24, 44, 0.38);
+    --panel-press: rgba(8, 24, 44, 0.58);
+    --focus: #ffffff;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --out: #14352a;
+      --court: #123256;
+      --line: #dfe3da;
+      --on-line: #0c1c2e;
+      --ink: #f2f5f8;
+      --ink-soft: rgba(242, 245, 248, 0.7);
+      --ball: #cbdc33;
+      --panel: rgba(0, 0, 0, 0.35);
+      --panel-press: rgba(0, 0, 0, 0.55);
+    }
+  }
+  :root[data-theme="dark"] {
+    --out: #14352a;
+    --court: #123256;
+    --line: #dfe3da;
+    --on-line: #0c1c2e;
+    --ink: #f2f5f8;
+    --ink-soft: rgba(242, 245, 248, 0.7);
+    --ball: #cbdc33;
+    --panel: rgba(0, 0, 0, 0.35);
+    --panel-press: rgba(0, 0, 0, 0.55);
+  }
+
+  *, *::before, *::after { box-sizing: inherit; }
+  [hidden] { display: none !important; }
+  html { height: 100%; scroll-padding-top: env(safe-area-inset-top, 0px); }
+  body {
+    height: 100%;
+    margin: 0;
+    background: var(--out);
+    color: var(--ink);
+    font-family: "Barlow", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-weight: 500;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+    overflow: hidden;
+  }
+
+  .app {
+    height: 100%;
+    display: grid;
+    grid-template-rows: auto auto 1fr;
+    gap: 8px;
+    padding: 10px 12px 12px;
+  }
+
+  /* Tabs */
+  .tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    padding: 4px;
+    background: var(--panel);
+    border-radius: 12px;
+  }
+  .tab {
+    font: inherit;
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--ink);
+    background: transparent;
+    border: 0;
+    border-radius: 9px;
+    padding: 10px 8px;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .tab[aria-selected="true"] { background: var(--line); color: var(--on-line); }
+
+  /* Status line */
+  .status {
+    min-height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.12rem;
+    font-weight: 600;
+    text-align: center;
+    color: var(--ink);
+  }
+  .status.flash { color: var(--ball); }
+
+  .view {
+    display: grid;
+    gap: 10px;
+    min-height: 0;
+  }
+  #view-match { grid-template-rows: 1fr auto; }
+  #view-tb { grid-template-rows: 1fr auto auto auto; }
+
+  /* Court */
+  .court {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    background: var(--court);
+    border: 3px solid var(--line);
+    border-radius: 4px;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .court::after {
+    content: "";
+    position: absolute;
+    top: 0; bottom: 0; left: 50%;
+    width: 3px;
+    margin-left: -1.5px;
+    background: var(--line);
+    pointer-events: none;
+  }
+
+  .side {
+    display: grid;
+    gap: 6px;
+    padding: 12px 10px 12px;
+    min-width: 0;
+    min-height: 0;
+  }
+  #view-match .side { grid-template-rows: auto auto 1fr auto; }
+  #view-tb .side { grid-template-rows: auto auto 1fr; }
+
+  .who { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .serve {
+    flex: none;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    border: 2px solid var(--ink-soft);
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+  }
+  .serve[aria-pressed="true"] {
+    background: var(--ball);
+    border-color: var(--ball);
+    box-shadow: inset 0 0 0 3px var(--court);
+  }
+  .serve:disabled { cursor: default; }
+  .name, .tbname {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+    font: inherit;
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--ink);
+    background: var(--panel);
+    border: 2px solid transparent;
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+  .name { -webkit-user-select: text; user-select: text; }
+  .name::placeholder { color: var(--ink-soft); }
+  .tbname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .role {
+    min-height: 1.3em;
+    padding: 0 4px;
+    font-size: 0.98rem;
+    font-weight: 600;
+    color: var(--ink-soft);
+    text-align: center;
+  }
+  .role.serving { color: var(--ball); }
+  .role.winner { color: var(--ball); }
+
+  .points {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 0;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--ink);
+    font-family: "Barlow Condensed", "Arial Narrow", Impact, sans-serif;
+    font-weight: 700;
+    font-size: clamp(4.5rem, min(32vw, 24vh), 10rem);
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.12s ease;
+    touch-action: manipulation;
+  }
+  .points:active:not(:disabled) { background: var(--panel-press); }
+  .points:disabled { cursor: default; }
+  .points .num { display: inline-block; font-variant-numeric: tabular-nums; }
+  .points .num.bump { animation: bump 0.22s ease-out; }
+  @keyframes bump {
+    0% { transform: scale(0.86); }
+    60% { transform: scale(1.06); }
+    100% { transform: scale(1); }
+  }
+
+  .games {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 10px;
+    padding: 8px 10px;
+    background: var(--panel);
+    border-radius: 8px;
+  }
+  .games .label { font-size: 1rem; color: var(--ink-soft); }
+  .games .count {
+    font-family: "Barlow Condensed", "Arial Narrow", Impact, sans-serif;
+    font-weight: 700;
+    font-size: 2.2rem;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Serve card */
+  .servecard {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 14px;
+    padding: 8px 14px 8px 10px;
+    background: var(--panel);
+    border-radius: 12px;
+  }
+  .servecard svg { display: block; width: 66px; height: 96px; }
+  .servecard .l1 { font-size: 1.25rem; font-weight: 600; }
+  .servecard .l2 { font-size: 1.05rem; font-weight: 600; color: var(--ball); margin-top: 2px; }
+  .servecard .l3 { font-size: 0.92rem; color: var(--ink-soft); margin-top: 4px; }
+  .cl { fill: none; stroke: var(--line); stroke-width: 1.6; }
+  .cl.net { stroke-width: 3; }
+  .target { fill: var(--ball); fill-opacity: 0.38; stroke: none; }
+  .path { fill: none; stroke: var(--ball); stroke-width: 2; stroke-dasharray: 4 4; }
+  .srv { fill: var(--ball); }
+
+  /* Controls */
+  .controls { display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: 8px; }
+  .btn {
+    font: inherit;
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--ink);
+    background: var(--panel);
+    border: 2px solid transparent;
+    border-radius: 10px;
+    padding: 12px 8px;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .btn:active:not(:disabled) { background: var(--panel-press); }
+  .btn:disabled { opacity: 0.4; cursor: default; }
+  .btn[aria-pressed="true"], .btn.confirm { border-color: var(--ball); color: var(--ball); }
+  .btn.primary { background: var(--ball); color: var(--on-line); width: 100%; font-size: 1.05rem; }
+  .btn.primary:active:not(:disabled) { background: var(--ball); filter: brightness(0.92); }
+
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+  @media (max-width: 380px) {
+    .name, .tbname { font-size: 1.1rem; }
+    .btn { font-size: 0.92rem; }
+  }
+  @media (max-height: 640px) {
+    .servecard svg { width: 52px; height: 76px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .points .num.bump { animation: none; }
+    .points { transition: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="tabs" role="tablist" aria-label="Scoring mode">
+    <button class="tab" id="tab-match" role="tab" aria-selected="true" aria-controls="view-match">Match</button>
+    <button class="tab" id="tab-tb" role="tab" aria-selected="false" aria-controls="view-tb">Tiebreak</button>
+  </div>
+
+  <div class="status" id="status" aria-live="polite"></div>
+
+  <!-- MATCH -->
+  <div class="view" id="view-match" role="tabpanel" aria-labelledby="tab-match">
+    <main class="court">
+      <section class="side" aria-label="Left player">
+        <div class="who">
+          <button class="serve" id="serve0" aria-pressed="false" aria-label="Serving: left player"></button>
+          <input class="name" id="name0" maxlength="14" placeholder="Player 1" aria-label="Left player name" autocomplete="off">
+        </div>
+        <div class="role" id="role0"></div>
+        <button class="points" id="pts0" aria-label="Add point for left player"><span class="num" id="num0">00</span></button>
+        <div class="games"><span class="label">Games</span><span class="count" id="games0">0</span></div>
+      </section>
+
+      <section class="side" aria-label="Right player">
+        <div class="who">
+          <button class="serve" id="serve1" aria-pressed="false" aria-label="Serving: right player"></button>
+          <input class="name" id="name1" maxlength="14" placeholder="Player 2" aria-label="Right player name" autocomplete="off">
+        </div>
+        <div class="role" id="role1"></div>
+        <button class="points" id="pts1" aria-label="Add point for right player"><span class="num" id="num1">00</span></button>
+        <div class="games"><span class="label">Games</span><span class="count" id="games1">0</span></div>
+      </section>
+    </main>
+
+    <div class="controls">
+      <button class="btn" id="undo">Undo</button>
+      <button class="btn" id="noad" aria-pressed="false">No-ad scoring</button>
+      <button class="btn" id="reset">New match</button>
+    </div>
+  </div>
+
+  <!-- TIEBREAK -->
+  <div class="view" id="view-tb" role="tabpanel" aria-labelledby="tab-tb" hidden>
+    <main class="court">
+      <section class="side" aria-label="Left player">
+        <div class="who">
+          <button class="serve" id="tbserve0" aria-pressed="false" aria-label="First server: left player"></button>
+          <div class="tbname" id="tbname0">Player 1</div>
+        </div>
+        <div class="role" id="tbrole0"></div>
+        <button class="points" id="tbpts0" aria-label="Add tiebreak point for left player"><span class="num" id="tbnum0">0</span></button>
+      </section>
+
+      <section class="side" aria-label="Right player">
+        <div class="who">
+          <button class="serve" id="tbserve1" aria-pressed="false" aria-label="First server: right player"></button>
+          <div class="tbname" id="tbname1">Player 2</div>
+        </div>
+        <div class="role" id="tbrole1"></div>
+        <button class="points" id="tbpts1" aria-label="Add tiebreak point for right player"><span class="num" id="tbnum1">0</span></button>
+      </section>
+    </main>
+
+    <div class="servecard" id="servecard">
+      <div id="courtsvg" aria-hidden="true"></div>
+      <div>
+        <div class="l1" id="sc1"></div>
+        <div class="l2" id="sc2"></div>
+        <div class="l3" id="sc3"></div>
+      </div>
+    </div>
+
+    <button class="btn primary" id="addgame" hidden>Add game to match</button>
+
+    <div class="controls">
+      <button class="btn" id="tbundo">Undo</button>
+      <button class="btn" id="tbtarget">Play to 7</button>
+      <button class="btn" id="tbreset">New tiebreak</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var KEY = "tennis-scorekeeper-v2";
+  var POINT_LABELS = ["00", "15", "30", "40"];
+
+  var state = {
+    names: ["", ""], pts: [0, 0], games: [0, 0], server: 0, noAd: false,
+    tab: "match",
+    tb: { pts: [0, 0], first: 0, target: 7 }
+  };
+  var history = [];
+  var tbHistory = [];
+  var flashText = "";
+  var flashTimer = null;
+
+  var $ = function (id) { return document.getElementById(id); };
+  var els = {
+    status: $("status"),
+    tabMatch: $("tab-match"), tabTb: $("tab-tb"),
+    viewMatch: $("view-match"), viewTb: $("view-tb"),
+    undo: $("undo"), noad: $("noad"), reset: $("reset"),
+    name: [$("name0"), $("name1")], pts: [$("pts0"), $("pts1")],
+    num: [$("num0"), $("num1")], games: [$("games0"), $("games1")],
+    serve: [$("serve0"), $("serve1")], role: [$("role0"), $("role1")],
+    tbname: [$("tbname0"), $("tbname1")], tbpts: [$("tbpts0"), $("tbpts1")],
+    tbnum: [$("tbnum0"), $("tbnum1")], tbserve: [$("tbserve0"), $("tbserve1")],
+    tbrole: [$("tbrole0"), $("tbrole1")],
+    servecard: $("servecard"), courtsvg: $("courtsvg"),
+    sc1: $("sc1"), sc2: $("sc2"), sc3: $("sc3"),
+    addgame: $("addgame"), tbundo: $("tbundo"), tbtarget: $("tbtarget"), tbreset: $("tbreset")
+  };
+
+  /* ---------- storage ---------- */
+  function load() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (!raw) return;
+      var s = JSON.parse(raw);
+      if (!s || !Array.isArray(s.pts) || !Array.isArray(s.games) || !Array.isArray(s.names)) return;
+      state.names = [String(s.names[0] || ""), String(s.names[1] || "")];
+      state.pts = [s.pts[0] | 0, s.pts[1] | 0];
+      state.games = [s.games[0] | 0, s.games[1] | 0];
+      state.server = s.server === 1 ? 1 : 0;
+      state.noAd = !!s.noAd;
+      state.tab = s.tab === "tb" ? "tb" : "match";
+      if (s.tb && Array.isArray(s.tb.pts)) {
+        state.tb = {
+          pts: [s.tb.pts[0] | 0, s.tb.pts[1] | 0],
+          first: s.tb.first === 1 ? 1 : 0,
+          target: s.tb.target === 10 ? 10 : 7
+        };
+      }
+    } catch (e) { /* storage unavailable or empty */ }
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* ignore */ }
+  }
+
+  /* ---------- helpers ---------- */
+  function displayName(i) { return state.names[i].trim() || (i === 0 ? "Player 1" : "Player 2"); }
+  function buzz(ms) { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) { /* ignore */ } }
+  function bump(el) { el.classList.remove("bump"); void el.offsetWidth; el.classList.add("bump"); }
+  function sideName(n) { return n % 2 === 0 ? "right (deuce) side" : "left (ad) side"; }
+  function sideShort(n) { return n % 2 === 0 ? "right (deuce)" : "left (ad)"; }
+
+  function flash(text) {
+    flashText = text;
+    clearTimeout(flashTimer);
+    flashTimer = setTimeout(function () { flashText = ""; render(); }, 2200);
+  }
+
+  function armable(btn, idleLabel, action) {
+    var timer = null;
+    function disarm() {
+      clearTimeout(timer);
+      btn.dataset.armed = "0";
+      btn.textContent = idleLabel;
+      btn.classList.remove("confirm");
+    }
+    btn.addEventListener("click", function () {
+      if (btn.dataset.armed !== "1") {
+        btn.dataset.armed = "1";
+        btn.textContent = "Tap to confirm";
+        btn.classList.add("confirm");
+        clearTimeout(timer);
+        timer = setTimeout(disarm, 3000);
+        return;
+      }
+      disarm();
+      action();
+    });
+  }
+
+  /* ---------- match logic ---------- */
+  function pointLabel(i) {
+    var a = state.pts[i], b = state.pts[1 - i];
+    if (a >= 3 && b >= 3) {
+      if (state.noAd || a === b) return "40";
+      return a > b ? "AD" : "40";
+    }
+    return POINT_LABELS[Math.min(a, 3)];
+  }
+
+  function matchStatus() {
+    if (flashText) return flashText;
+    var a = state.pts[0], b = state.pts[1];
+    if (a >= 3 && b >= 3) {
+      if (state.noAd) return "Deciding point";
+      if (a === b) return "Deuce";
+      return "Advantage " + displayName(a > b ? 0 : 1);
+    }
+    return "";
+  }
+
+  function snapshot() {
+    history.push(JSON.stringify({ pts: state.pts, games: state.games, server: state.server }));
+    if (history.length > 300) history.shift();
+  }
+
+  function addPoint(i) {
+    snapshot();
+    flashText = "";
+    state.pts[i] += 1;
+    var a = state.pts[i], b = state.pts[1 - i];
+    var won = state.noAd ? a >= 4 : (a >= 4 && a - b >= 2);
+    if (won) {
+      state.games[i] += 1;
+      state.pts = [0, 0];
+      state.server = 1 - state.server;
+      flash("Game " + displayName(i));
+      buzz(40);
+    } else { buzz(12); }
+    save();
+    render();
+    bump(els.num[i]);
+  }
+
+  function undo() {
+    if (!history.length) return;
+    var s = JSON.parse(history.pop());
+    state.pts = s.pts; state.games = s.games; state.server = s.server;
+    flashText = ""; clearTimeout(flashTimer);
+    save(); render();
+  }
+
+  function toggleNoAd() {
+    state.noAd = !state.noAd;
+    if (state.noAd && state.pts[0] >= 3 && state.pts[1] >= 3) state.pts = [3, 3];
+    save(); render();
+  }
+
+  function resetMatch() {
+    state.pts = [0, 0]; state.games = [0, 0]; state.server = 0;
+    history = [];
+    flashText = ""; clearTimeout(flashTimer);
+    save(); render();
+  }
+
+  /* ---------- tiebreak logic ---------- */
+  function tbTotal() { return state.tb.pts[0] + state.tb.pts[1]; }
+
+  // One point for the first server, then two points each, alternating.
+  function tbServer() {
+    var n = tbTotal();
+    if (n === 0) return state.tb.first;
+    return Math.floor((n + 1) / 2) % 2 === 0 ? state.tb.first : 1 - state.tb.first;
+  }
+
+  function tbWinner() {
+    var a = state.tb.pts[0], b = state.tb.pts[1], t = state.tb.target;
+    if (a >= t && a - b >= 2) return 0;
+    if (b >= t && b - a >= 2) return 1;
+    return -1;
+  }
+
+  function tbPoint(i) {
+    if (tbWinner() !== -1) return;
+    tbHistory.push(JSON.stringify({ pts: state.tb.pts, first: state.tb.first }));
+    if (tbHistory.length > 200) tbHistory.shift();
+    state.tb.pts[i] += 1;
+    buzz(tbWinner() !== -1 ? 40 : 12);
+    save(); render();
+    bump(els.tbnum[i]);
+  }
+
+  function tbUndo() {
+    if (!tbHistory.length) return;
+    var s = JSON.parse(tbHistory.pop());
+    state.tb.pts = s.pts; state.tb.first = s.first;
+    save(); render();
+  }
+
+  function tbNew() {
+    state.tb.pts = [0, 0];
+    state.tb.first = state.server;
+    tbHistory = [];
+    save(); render();
+  }
+
+  function tbToMatch() {
+    var w = tbWinner();
+    if (w === -1) return;
+    snapshot();
+    state.games[w] += 1;
+    state.pts = [0, 0];
+    state.server = 1 - state.tb.first;
+    state.tb = { pts: [0, 0], first: state.server, target: state.tb.target };
+    tbHistory = [];
+    state.tab = "match";
+    flash("Game " + displayName(w));
+    save(); render();
+  }
+
+  function tbStatus() {
+    var w = tbWinner(), n = tbTotal();
+    if (w !== -1) {
+      var hi = Math.max(state.tb.pts[0], state.tb.pts[1]);
+      var lo = Math.min(state.tb.pts[0], state.tb.pts[1]);
+      return displayName(w) + " wins the tiebreak " + hi + "\u2013" + lo;
+    }
+    if (n > 0 && n % 6 === 0) return "Change ends";
+    return "Tiebreak to " + state.tb.target + ", win by 2";
+  }
+
+  /* ---------- court diagram ---------- */
+  function courtSvg(n) {
+    var deuce = n % 2 === 0;
+    var sx = deuce ? 66 : 34;
+    var tx = deuce ? 34 : 66;
+    var tbox = deuce ? "M18 40 H50 V70 H18 Z" : "M50 40 H82 V70 H50 Z";
+    return '<svg viewBox="0 0 100 146" xmlns="http://www.w3.org/2000/svg" focusable="false">' +
+      '<path class="target" d="' + tbox + '"/>' +
+      '<rect class="cl" x="10" y="10" width="80" height="120"/>' +
+      '<path class="cl" d="M18 10 V130 M82 10 V130"/>' +
+      '<path class="cl" d="M18 40 H82 M18 100 H82 M50 40 V100"/>' +
+      '<path class="cl net" d="M4 70 H96"/>' +
+      '<path class="path" d="M' + sx + ' 126 L' + tx + ' 56"/>' +
+      '<circle class="srv" cx="' + sx + '" cy="134" r="6"/>' +
+      '</svg>';
+  }
+
+  /* ---------- render ---------- */
+  function render() {
+    var onTb = state.tab === "tb";
+    els.tabMatch.setAttribute("aria-selected", onTb ? "false" : "true");
+    els.tabTb.setAttribute("aria-selected", onTb ? "true" : "false");
+    els.viewMatch.hidden = onTb;
+    els.viewTb.hidden = !onTb;
+
+    // Match view
+    var n = state.pts[0] + state.pts[1];
+    var decider = state.noAd && state.pts[0] === 3 && state.pts[1] === 3;
+    for (var i = 0; i < 2; i++) {
+      els.num[i].textContent = pointLabel(i);
+      els.games[i].textContent = state.games[i];
+      els.serve[i].setAttribute("aria-pressed", state.server === i ? "true" : "false");
+      els.pts[i].setAttribute("aria-label", "Add point for " + displayName(i) + ". Score " + pointLabel(i));
+      if (document.activeElement !== els.name[i]) els.name[i].value = state.names[i];
+      if (state.server === i) {
+        els.role[i].textContent = decider ? "Receiver picks the side" : "Serve from " + sideShort(n);
+        els.role[i].className = "role serving";
+      } else {
+        els.role[i].textContent = "Receiving";
+        els.role[i].className = "role";
+      }
+    }
+    els.noad.setAttribute("aria-pressed", state.noAd ? "true" : "false");
+    els.undo.disabled = history.length === 0;
+
+    // Tiebreak view
+    var tn = tbTotal(), w = tbWinner(), srv = tbServer();
+    for (var j = 0; j < 2; j++) {
+      els.tbname[j].textContent = displayName(j);
+      els.tbnum[j].textContent = state.tb.pts[j];
+      els.tbpts[j].disabled = w !== -1;
+      els.tbserve[j].setAttribute("aria-pressed", srv === j && w === -1 ? "true" : "false");
+      els.tbserve[j].disabled = tn !== 0;
+      els.tbpts[j].setAttribute("aria-label", "Add tiebreak point for " + displayName(j) + ". Score " + state.tb.pts[j]);
+      if (w !== -1) {
+        els.tbrole[j].textContent = w === j ? "Winner" : "";
+        els.tbrole[j].className = "role" + (w === j ? " winner" : "");
+      } else if (srv === j) {
+        els.tbrole[j].textContent = "Serve from " + sideShort(tn);
+        els.tbrole[j].className = "role serving";
+      } else {
+        els.tbrole[j].textContent = "Receiving";
+        els.tbrole[j].className = "role";
+      }
+    }
+    els.servecard.hidden = w !== -1;
+    els.addgame.hidden = w === -1;
+    if (w === -1) {
+      els.courtsvg.innerHTML = courtSvg(tn);
+      els.sc1.textContent = displayName(srv) + " serves";
+      els.sc2.textContent = "From the " + sideName(tn);
+      var lastOfTurn = tn === 0 || tn % 2 === 0;
+      els.sc3.textContent = "Point " + (tn + 1) + " \u00b7 " +
+        (lastOfTurn ? "server changes after this point" : "serves again next point");
+    }
+    els.tbundo.disabled = tbHistory.length === 0;
+    els.tbtarget.textContent = "Play to " + state.tb.target;
+
+    // Status
+    if (onTb) {
+      var ts = tbStatus();
+      els.status.textContent = ts;
+      els.status.className = "status" + (ts === "Change ends" || w !== -1 ? " flash" : "");
+    } else {
+      els.status.textContent = matchStatus();
+      els.status.className = "status" + (flashText ? " flash" : "");
+    }
+  }
+
+  function setTab(tab) {
+    state.tab = tab;
+    if (tab === "tb" && tbTotal() === 0) state.tb.first = state.server;
+    save(); render();
+  }
+
+  /* ---------- events ---------- */
+  els.tabMatch.addEventListener("click", function () { setTab("match"); });
+  els.tabTb.addEventListener("click", function () { setTab("tb"); });
+
+  els.pts[0].addEventListener("click", function () { addPoint(0); });
+  els.pts[1].addEventListener("click", function () { addPoint(1); });
+  els.serve[0].addEventListener("click", function () { state.server = 0; save(); render(); });
+  els.serve[1].addEventListener("click", function () { state.server = 1; save(); render(); });
+  els.undo.addEventListener("click", undo);
+  els.noad.addEventListener("click", toggleNoAd);
+  armable(els.reset, "New match", resetMatch);
+
+  els.tbpts[0].addEventListener("click", function () { tbPoint(0); });
+  els.tbpts[1].addEventListener("click", function () { tbPoint(1); });
+  els.tbserve[0].addEventListener("click", function () { if (tbTotal() === 0) { state.tb.first = 0; save(); render(); } });
+  els.tbserve[1].addEventListener("click", function () { if (tbTotal() === 0) { state.tb.first = 1; save(); render(); } });
+  els.tbundo.addEventListener("click", tbUndo);
+  els.tbtarget.addEventListener("click", function () {
+    state.tb.target = state.tb.target === 7 ? 10 : 7;
+    save(); render();
+  });
+  armable(els.tbreset, "New tiebreak", tbNew);
+  els.addgame.addEventListener("click", tbToMatch);
+
+  [0, 1].forEach(function (i) {
+    els.name[i].addEventListener("input", function () {
+      state.names[i] = els.name[i].value;
+      save();
+      els.status.textContent = matchStatus();
+    });
+    els.name[i].addEventListener("keydown", function (e) { if (e.key === "Enter") els.name[i].blur(); });
+    els.name[i].addEventListener("blur", render);
+  });
+
+  load();
+  render();
+})();
+</script>
+</body>
+</html>
