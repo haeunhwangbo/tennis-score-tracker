@@ -302,9 +302,14 @@
     .points { transition: none; }
   }
 </style>
+<link rel="stylesheet" href="results.css">
 </head>
 <body>
-<div class="app">
+<nav class="nav" role="tablist" aria-label="Page">
+  <button id="nav-score" role="tab" aria-selected="true">Scorekeeper</button>
+  <button id="nav-results" role="tab" aria-selected="false">결과표</button>
+</nav>
+<div class="app" id="page-score">
   <div class="tabs" role="tablist" aria-label="Scoring mode">
     <button class="tab" id="tab-match" role="tab" aria-selected="true" aria-controls="view-match">Match</button>
     <button class="tab" id="tab-tb" role="tab" aria-selected="false" aria-controls="view-tb">Tiebreak</button>
@@ -341,6 +346,7 @@
       <button class="btn" id="noad" aria-pressed="false">No-ad scoring</button>
       <button class="btn" id="reset">New match</button>
     </div>
+    <div class="send-row"><button class="btn" id="sk-send">결과표로 점수 보내기</button></div>
   </div>
 
   <!-- TIEBREAK -->
@@ -383,6 +389,59 @@
     </div>
   </div>
 </div>
+
+<div class="results" id="page-results" hidden>
+  <div class="r-top">
+    <h1>대진·결과</h1>
+    <div class="r-actions">
+      <span class="r-sync" id="r-sync"></span>
+      <button class="r-btn" id="r-refresh" aria-label="새로고침">↻</button>
+    </div>
+  </div>
+  <div class="r-banner" id="r-banner" hidden></div>
+  <button class="r-btn primary r-add" id="r-add">점수 입력</button>
+  <div id="r-rounds"></div>
+  <div id="r-tables"></div>
+</div>
+
+<div class="r-sheet" id="r-sheet" hidden>
+  <div class="r-panel" role="dialog" aria-modal="true" aria-labelledby="f-title">
+    <h2 id="f-title">점수 입력</h2>
+    <select id="f-match" aria-label="경기 선택"></select>
+    <div class="f-row">
+      <span class="f-name" id="f-name0">선수 1</span>
+      <span class="f-step">
+        <button type="button" data-side="0" data-step="-1" aria-label="선수 1 게임 빼기">−</button>
+        <output id="f-g0">0</output>
+        <button type="button" data-side="0" data-step="1" aria-label="선수 1 게임 더하기">+</button>
+      </span>
+    </div>
+    <div class="f-row">
+      <span class="f-name" id="f-name1">선수 2</span>
+      <span class="f-step">
+        <button type="button" data-side="1" data-step="-1" aria-label="선수 2 게임 빼기">−</button>
+        <output id="f-g1">0</output>
+        <button type="button" data-side="1" data-step="1" aria-label="선수 2 게임 더하기">+</button>
+      </span>
+    </div>
+    <div class="f-tb" id="f-tbrow" hidden>
+      <label for="f-tb0">타이브레이크 점수 (선택)</label>
+      <input type="number" inputmode="numeric" min="0" id="f-tb0" placeholder="선수 1" aria-label="선수 1 타이브레이크 점수">
+      <input type="number" inputmode="numeric" min="0" id="f-tb1" placeholder="선수 2" aria-label="선수 2 타이브레이크 점수">
+    </div>
+    <div class="f-tools">
+      <button type="button" class="r-btn" id="f-load">스코어키퍼에서 불러오기</button>
+      <button type="button" class="r-btn" id="f-swap">좌우 바꾸기</button>
+    </div>
+    <p class="f-note" id="f-note"></p>
+    <p class="f-err" id="f-err" role="alert"></p>
+    <div class="f-actions">
+      <button type="button" class="r-btn" id="f-cancel">취소</button>
+      <button type="button" class="r-btn primary" id="f-save">저장</button>
+    </div>
+  </div>
+</div>
+<div class="r-toast" id="r-toast" role="status" hidden></div>
 
 <script>
 (function () {
@@ -737,9 +796,14 @@
     els.name[i].addEventListener("blur", render);
   });
 
+  window.tennisScorekeeper = {
+    read: function () { return { names: state.names.slice(), games: state.games.slice() }; }
+  };
+
   load();
   render();
 })();
 </script>
+<script src="results.js"></script>
 </body>
 </html>
