@@ -57,7 +57,7 @@
 
   *, *::before, *::after { box-sizing: inherit; }
   [hidden] { display: none !important; }
-  html { height: 100%; scroll-padding-top: env(safe-area-inset-top, 0px); }
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; height: 100%; scroll-padding-top: env(safe-area-inset-top, 0px); }
   body {
     height: 100%;
     margin: 0;
@@ -74,6 +74,7 @@
   .app {
     height: 100%;
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto auto 1fr;
     gap: 8px;
     padding: 10px 12px 12px;
@@ -117,8 +118,10 @@
 
   .view {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 10px;
     min-height: 0;
+    min-width: 0;
   }
   #view-match { grid-template-rows: 1fr auto; }
   #view-tb { grid-template-rows: 1fr auto auto auto; }
@@ -127,7 +130,7 @@
   .court {
     position: relative;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     background: var(--court);
     border: 3px solid var(--line);
     border-radius: 4px;
@@ -266,7 +269,7 @@
   .srv { fill: var(--ball); }
 
   /* Controls */
-  .controls { display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: 8px; }
+  .controls { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr); gap: 8px; }
   .btn {
     font: inherit;
     font-weight: 600;
