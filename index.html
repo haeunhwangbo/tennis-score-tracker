@@ -5,10 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
 <title>Tennis Scorekeeper</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@500;600&display=swap" rel="stylesheet">
+<link rel="preload" href="fonts/barlow-condensed-700.woff2" as="font" type="font/woff2" crossorigin>
 <style>
+  @font-face { font-family: "Barlow"; font-weight: 500; font-style: normal; font-display: swap;
+    src: url("fonts/barlow-500.woff2") format("woff2"); }
+  @font-face { font-family: "Barlow"; font-weight: 600; font-style: normal; font-display: swap;
+    src: url("fonts/barlow-600.woff2") format("woff2"); }
+  @font-face { font-family: "Barlow Condensed"; font-weight: 600; font-style: normal; font-display: swap;
+    src: url("fonts/barlow-condensed-600.woff2") format("woff2"); }
+  @font-face { font-family: "Barlow Condensed"; font-weight: 700; font-style: normal; font-display: swap;
+    src: url("fonts/barlow-condensed-700.woff2") format("woff2"); }
   :root {
     --out: #2c6b52;
     --court: #1f5a9a;
@@ -202,9 +208,10 @@
     border-radius: 12px;
     background: transparent;
     color: var(--ink);
-    font-family: "Barlow Condensed", "Arial Narrow", Impact, sans-serif;
+    font-family: "Barlow Condensed", "Roboto Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
     font-weight: 700;
     font-size: clamp(4.5rem, min(32vw, 24vh), 10rem);
+    font-size: clamp(4.5rem, min(32vw, 24dvh), 10rem);
     line-height: 1;
     cursor: pointer;
     transition: background 0.12s ease;
@@ -231,7 +238,7 @@
   }
   .games .label { font-size: 1rem; color: var(--ink-soft); }
   .games .count {
-    font-family: "Barlow Condensed", "Arial Narrow", Impact, sans-serif;
+    font-family: "Barlow Condensed", "Roboto Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
     font-weight: 700;
     font-size: 2.2rem;
     line-height: 1;
