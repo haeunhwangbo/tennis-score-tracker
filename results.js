@@ -4,7 +4,7 @@
   /* ================= config ================= */
   // Paste the Google Apps Script web app URL (ends in /exec) here.
   // While empty, results are saved only in this browser (local mode).
-  var API_URL = "";
+  var API_URL = "https://script.google.com/macros/s/AKfycbycGyn57nRnjDmp7v9mpv2KMdn_aeh0B2afBjaxAIaXV8d6CY2g4blrPaahLYWuIMCJKw/exec";
   var POLL_MS = 10000;
   var LOCAL_KEY = "tennis-results-local-v1";
   var TAB_KEY = "tennis-page-v1";
